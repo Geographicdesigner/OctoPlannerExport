@@ -7,7 +7,15 @@
 --   and the loot and money you and your group get.
 -- The planner splits it up. Lines: "time<TAB>code<TAB>text".
 
-local MAX_EV = 200000
+-- 400,000 lines covers a full 40-man Molten Core (200,000 ran out after about an hour)
+local MAX_EV = 400000
+
+-- other people's "gains 164 Mana from ..." lines are about a tenth of a raid log and the planner never uses them
+local function skipLine(text)
+  if not text then return false end
+  local _, _, kind = string.find(text, "^%S+ gains %d+ (%a+) from ")
+  return kind == "Mana" or kind == "Rage" or kind == "Energy"
+end
 
 -- combat text channels, saved as their number to keep the file small (the planner has the same list)
 local CH = {
@@ -122,7 +130,7 @@ ev:SetScript("OnEvent", function()
     checkGroup(true); last = {}; power(); health()
   end
   local c = CHN[event]
-  if c then put(c, arg1) return end
+  if c then if not skipLine(arg1) then put(c, arg1) end return end
   if event == "UNIT_CASTEVENT" then
     if arg3 == "MAINHAND" or arg3 == "OFFHAND" then return end
     local sn, rank = "", ""
