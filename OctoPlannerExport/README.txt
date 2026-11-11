@@ -33,9 +33,12 @@ Target dummy runs
   /reload after your runs, then upload the file. The runs show on the planner's Rotation tab.
 
 Fight log (raids and dungeons)
-  /ope log [name]     start, for example /ope log mc. Every fight from then on is saved:
-                      your hit table per ability, damage per target and immunes, damage you took,
-                      deaths with the hits before them, consumables and buff uptime.
+  /ope log [name]     start, for example /ope log mc. From then on everything is saved, in and
+                      out of combat: all combat text (you, your group, enemies), every spell cast
+                      near you with who cast it and on whom (needs SuperWoW), your energy, rage,
+                      mana and health, your group and any swaps, your target, zone and resets.
+                      Each fight also keeps a summary: hit table per ability, damage per target,
+                      damage you took, deaths, consumables and buff uptime.
   /ope log            type it again to stop.
   /ope log clear      delete saved logs.
   A /reload or disconnect does not stop the log. Upload the file afterwards.

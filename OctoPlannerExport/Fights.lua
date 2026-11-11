@@ -345,6 +345,9 @@ ev:SetScript("OnEvent", function()
   if F then onMsg(arg1) elseif event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS" or event == "CHAT_MSG_SPELL_AURA_GONE_SELF" then onMsg(arg1) end
 end)
 
+-- Raw.lua reads the running log through this
+function OPE_CurrentLog() return LOG end
+
 function OPE_Log(arg)
   local c = charDB()
   if not c then say("Not ready yet, try again in a moment.") return end
@@ -367,5 +370,5 @@ function OPE_Log(arg)
   table.insert(c.logs, LOG)
   while table.getn(c.logs) > MAX_LOGS do table.remove(c.logs, 1) end
   if UnitAffectingCombat("player") then startFight() end
-  say("Fight log on" .. (LOG.label and (" \"" .. LOG.label .. "\"") or "") .. ". Every fight is saved until you type /ope log again. A /reload keeps it going.")
+  say("Fight log on" .. (LOG.label and (" \"" .. LOG.label .. "\"") or "") .. ". Everything is recorded until you type /ope log again. A /reload keeps it going.")
 end

@@ -340,7 +340,7 @@ SlashCmdList["OCTOPLANNEREXPORT"] = function(msg)
     say("/ope scan  start or continue the item scan    /ope stop  pause it")
     say("/ope speed N  items per second (1-10)    /ope rescan  start over    /ope save  save gear, bags and talents now")
     say("/ope dummy [name]  record your damage on a dummy, again to stop    /ope dummy clear  delete saved runs")
-    say("/ope log [name]  log every fight of a raid or dungeon, again to stop    /ope log clear  delete saved logs")
+    say("/ope log [name]  record everything in a raid or dungeon (fights, casts, group, time between pulls), again to stop    /ope log clear  delete saved logs")
     say("/ope cc  show in chat which ability uses each Clearcasting (on/off)")
     say("When done, log out and upload SavedVariables/OctoPlannerExport.lua to the planner.")
   end
