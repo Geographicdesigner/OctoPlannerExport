@@ -8,7 +8,7 @@ A World of Warcraft 1.12 addon (OctoWoW / Turtle WoW) for the Octo Druid Gear Pl
 
 ## Install
 
-1. Download `OctoPlannerExport.zip` from the latest release.
+1. Download [OctoPlannerExport.zip](https://github.com/Geographicdesigner/OctoPlannerExport/raw/main/OctoPlannerExport.zip).
 2. Unzip it into `World of Warcraft/Interface/AddOns/` so you get `Interface/AddOns/OctoPlannerExport/`.
 3. Enable it at character select.
 
