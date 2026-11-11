@@ -1,16 +1,15 @@
 # Octo Planner Export
 
-A World of Warcraft 1.12 addon (OctoWoW / Turtle WoW) for the Octo Druid Gear Planner.
+Saves your gear, bags, bank, talents and spellbook for the [Octo Druid Gear Planner](https://claude.ai/artifact/UH8XPsJL2wonzFTwNx4ryd), and records your fights. Unzip it into Interface/AddOns, then upload SavedVariables/OctoPlannerExport.lua after a /reload.
 
-- Saves your gear with enchants, bags, bank, talents, professions and spellbook.
-- `/ope dummy [name]` records your damage on a training dummy.
-- `/ope log [name]` logs every fight of a raid or dungeon: hit table per ability, damage per target and immunes, damage taken, deaths, consumables and buff uptime.
+**[Download OctoPlannerExport.zip](https://github.com/Geographicdesigner/OctoPlannerExport/raw/main/OctoPlannerExport.zip)**
 
-## Install
-
-1. Download [OctoPlannerExport.zip](https://github.com/Geographicdesigner/OctoPlannerExport/raw/main/OctoPlannerExport.zip).
-2. Unzip it into `World of Warcraft/Interface/AddOns/` so you get `Interface/AddOns/OctoPlannerExport/`.
-3. Enable it at character select.
-
-After playing, `/reload` and upload `WTF/Account/<ACCOUNT>/SavedVariables/OctoPlannerExport.lua` to the planner.
-See `OctoPlannerExport/README.txt` for every command.
+| Command | What it does |
+|---|---|
+| `/ope dummy [name]` | Starts recording your damage. The clock starts at your first hit. |
+| `/ope dummy` | Stops and saves the run: DPS, damage per ability, crits, misses, bleed ticks, what used each Clearcasting, energy and Reshifts. Shown on the Rotation tab. |
+| `/ope dummy clear` | Deletes your saved runs. |
+| `/ope log [name]` | Logs every fight of a raid or dungeon until you type /ope log again. A /reload keeps it going. |
+| `/ope cc` | Shows in chat which ability used each Clearcasting. Type it again to turn it off. |
+| `/ope save` | Saves gear, bags and talents right away. |
+| `/ope scan` · `/ope stop` | Reads Octo’s item tooltips for the Atlas, and pauses it. |
