@@ -3,7 +3,8 @@
 --   every combat text line (you, your group, other players, enemies, pets), resets and boss emotes,
 --   every spell cast near you with who cast it and on whom (SuperWoW): buffs, totems, blessings, heals, enemy casts,
 --   your energy, rage, mana and health as they change (ticks, Furor, rage from hits),
---   your group and any swaps, your target, your zone, and when you enter and leave combat.
+--   your group and any swaps, your target, your zone, and when you enter and leave combat,
+--   and the loot and money you and your group get.
 -- The planner splits it up. Lines: "time<TAB>code<TAB>text".
 
 local MAX_EV = 200000
@@ -24,7 +25,7 @@ local CH = {
   "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS", "CHAT_MSG_SPELL_PERIODIC_PARTY_DAMAGE", "CHAT_MSG_SPELL_PERIODIC_PARTY_BUFFS",
   "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_DAMAGE", "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS", "CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE", "CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_BUFFS",
   "CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", "CHAT_MSG_SPELL_PERIODIC_CREATURE_BUFFS", "CHAT_MSG_SPELL_FAILED_LOCALPLAYER",
-  "CHAT_MSG_MONSTER_EMOTE", "CHAT_MSG_MONSTER_YELL", "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT"
+  "CHAT_MSG_MONSTER_EMOTE", "CHAT_MSG_MONSTER_YELL", "CHAT_MSG_SYSTEM", "CHAT_MSG_LOOT", "CHAT_MSG_MONEY"
 }
 local CHN = {}
 for i, e in ipairs(CH) do CHN[e] = i end
