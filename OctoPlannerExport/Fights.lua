@@ -103,6 +103,8 @@ local function startFight()
   for n in pairs(auraNames(false)) do active[n] = { since = GetTime() } end
   for n in pairs(auraNames(true)) do active[n] = { since = GetTime(), debuff = true } end
 end
+-- Octo writes stacks as "Frailty (1)" when they land but "Frailty" when they fade: keep one name
+local function auraName(n) return (string.gsub(n or "", " %(%d+%)$", "")) end
 local function closeAura(n)
   local a = active[n]
   if not a or not F then active[n] = nil return end
@@ -240,11 +242,13 @@ local function onMsg(msg)
     return
   end
   _, _, spell = string.find(msg, "^You are afflicted by (.-)%.")
+  if spell then spell = auraName(spell) end
   if spell then if not active[spell] then active[spell] = { since = GetTime(), debuff = true } end return end
   _, _, spell = string.find(msg, "^You gain (.-)%.$")
+  if spell then spell = auraName(spell) end
   if spell and not string.find(spell, "^%d") then if not active[spell] then active[spell] = { since = GetTime() } end return end
   _, _, spell = string.find(msg, "^(.-) fades from you%.")
-  if spell then closeAura(spell) return end
+  if spell then closeAura(auraName(spell)) return end
 end
 
 -- ---------- consumables: anything you use from your bags ----------
