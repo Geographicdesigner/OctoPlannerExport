@@ -1,7 +1,7 @@
 -- Octo Planner Export: fight log (WoW 1.12 / Lua 5.0)
 -- /ope log [name]  starts a log (for a whole raid or dungeon); /ope log again stops it.
 -- While a log is on, every time you enter and leave combat is saved as one fight, with:
---   your damage per ability and its full hit table, damage per target and what it was immune to,
+--   every spell you cast (with SuperWoW), your damage per ability and its full hit table, damage per target and what it was immune to,
 --   damage you took by enemy and ability, your deaths with the hits before them,
 --   consumables you used, and how long your buffs and debuffs were up.
 -- The log lives in SavedVariables while it runs, so a /reload or disconnect does not lose it.
@@ -53,7 +53,7 @@ local function auraNames(debuff)
 end
 
 -- ---------- per-fight tables ----------
-local function newAb() return { n = 0, h = 0, c = 0, ms = 0, dg = 0, pr = 0, bl = 0, rs = 0, gl = 0, im = 0, d = 0, t = 0, td = 0, cd = 0 } end
+local function newAb() return { u = 0, n = 0, h = 0, c = 0, ms = 0, dg = 0, pr = 0, bl = 0, rs = 0, gl = 0, im = 0, d = 0, t = 0, td = 0, cd = 0 } end
 local function abOf(name)
   local a = F.ab[name]
   if not a then
@@ -290,6 +290,27 @@ UseContainerItem = function(bag, slot, a3, a4)
   return origUse(bag, slot, a3, a4)
 end
 
+-- ---------- every spell you cast (SuperWoW): Bash, Feral Charge, Roars and other spells that do no damage ----------
+local MYGUID = nil
+local preCasts = {}   -- casts in the 3 seconds before combat starts (Feral Charge, a pull) count for that fight
+local function myCast(spellId)
+  if not SpellInfo then return end
+  local name = SpellInfo(spellId)
+  if not name or name == "" then return end
+  if not F then
+    table.insert(preCasts, { n = name, at = GetTime() })
+    if table.getn(preCasts) > 5 then table.remove(preCasts, 1) end
+    return
+  end
+  local a = abOf(name); if a then a.u = a.u + 1 end
+end
+local function addPreCasts()
+  for _, c in ipairs(preCasts) do
+    if GetTime() - c.at <= 3 then local a = abOf(c.n); if a then a.u = a.u + 1 end end
+  end
+  preCasts = {}
+end
+
 -- ---------- events ----------
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "CHAT_MSG_COMBAT_SELF_HITS", "CHAT_MSG_COMBAT_SELF_MISSES", "CHAT_MSG_SPELL_SELF_DAMAGE",
@@ -299,6 +320,7 @@ for _, e in ipairs({ "CHAT_MSG_COMBAT_SELF_HITS", "CHAT_MSG_COMBAT_SELF_MISSES",
   "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD", "PLAYER_LOGOUT" }) do
   ev:RegisterEvent(e)
 end
+pcall(function() ev:RegisterEvent("UNIT_CASTEVENT") end)
 ev:SetScript("OnEvent", function()
   if event == "PLAYER_ENTERING_WORLD" then
     -- continue a log that was running before a /reload or disconnect
@@ -312,7 +334,13 @@ ev:SetScript("OnEvent", function()
     return
   end
   if not LOG then return end
-  if event == "PLAYER_REGEN_DISABLED" then startFight() return end
+  if event == "UNIT_CASTEVENT" then
+    if arg3 ~= "CAST" then return end
+    if not MYGUID then local _, g = UnitExists("player"); MYGUID = g end
+    if arg1 == MYGUID then myCast(arg4) end
+    return
+  end
+  if event == "PLAYER_REGEN_DISABLED" then startFight(); addPreCasts() return end
   if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_LOGOUT" then endFight() return end
   if F then onMsg(arg1) elseif event == "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS" or event == "CHAT_MSG_SPELL_AURA_GONE_SELF" then onMsg(arg1) end
 end)
