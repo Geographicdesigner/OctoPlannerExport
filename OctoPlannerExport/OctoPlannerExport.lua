@@ -53,6 +53,16 @@ local function saveTalents()
   e.name = name; e.realm = realm; e.class = classToken; e.race = UnitRace("player"); e.time = time()
   local lvl = UnitLevel("player"); if lvl and lvl > 0 then e.level = lvl end
   e.tabs = c.tabs; e.talents = c.talents
+  OPE_SaveIdentity(e)
+end
+-- gender, faction and guild for the planner's profile page (the guild can take a moment after login)
+function OPE_SaveIdentity(e)
+  local sex = UnitSex and UnitSex("player"); if sex and sex > 1 then e.sex = sex end
+  local fac = UnitFactionGroup and UnitFactionGroup("player"); if fac then e.faction = fac end
+  if IsInGuild and IsInGuild() then
+    local g, rank = GetGuildInfo("player")
+    if g then e.guild = g; e.grank = rank end
+  elseif IsInGuild then e.guild = nil; e.grank = nil end
 end
 
 -- ---------- what the character owns ----------
@@ -250,6 +260,8 @@ end
 -- ---------- events ----------
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+ev:RegisterEvent("PLAYER_GUILD_UPDATE")
+ev:RegisterEvent("GUILD_ROSTER_UPDATE")
 ev:RegisterEvent("CHARACTER_POINTS_CHANGED")
 ev:RegisterEvent("PLAYER_LOGOUT")
 ev:RegisterEvent("BANKFRAME_OPENED")
@@ -283,6 +295,11 @@ local function saveAllNow() saveTalents(); saveEquipped(); saveBags({ 0, 1, 2, 3
 ev:SetScript("OnEvent", function()
   initDB()
   if event == "PLAYER_LOGOUT" then return end  -- too late to read anything; the file is written from what was saved while playing
+  if event == "PLAYER_GUILD_UPDATE" or event == "GUILD_ROSTER_UPDATE" then
+    local e = OctoPlannerExportDB.chars and OctoPlannerExportDB.chars[(UnitName("player") or "?") .. " - " .. (GetRealmName() or "?")]
+    if e then OPE_SaveIdentity(e) end
+    return
+  end
   if event == "PLAYER_ENTERING_WORLD" then later("talents", 3); later("equipped", 3); later("bags", 3); later("skills", 3); later("spells", 4) end
   if event == "LEARNED_SPELL_IN_TAB" or event == "SPELLS_CHANGED" then later("spells", 3) end
   if event == "CHARACTER_POINTS_CHANGED" then later("talents", 1) end
