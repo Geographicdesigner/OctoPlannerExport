@@ -1,0 +1,11 @@
+## Interface: 11200
+## Title: Octo Planner Export
+## Notes: Saves your talents, gear, bank and Octo's own item tooltips and icons for the Octo Druid Gear Planner. Type /ope for help.
+## Author: Octo Druid Gear Planner
+## Version: 4.2
+## SavedVariables: OctoPlannerExportDB
+
+ItemList.lua
+OctoPlannerExport.lua
+Dummy.lua
+Fights.lua
