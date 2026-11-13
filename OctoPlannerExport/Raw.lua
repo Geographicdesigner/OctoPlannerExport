@@ -4,7 +4,8 @@
 --   every spell cast near you with who cast it and on whom (SuperWoW): buffs, totems, blessings, heals, enemy casts,
 --   your energy, rage, mana and health as they change (ticks, Furor, rage from hits),
 --   your group and any swaps, your target, your zone, and when you enter and leave combat,
---   and the loot and money you and your group get.
+--   and the loot and money you and your group get,
+--   and where you and your group stand: every second in combat, every 5 seconds out of combat (SuperWoW).
 -- The planner splits it up. Lines: "time<TAB>code<TAB>text".
 
 -- 400,000 lines covers a full 40-man Molten Core (200,000 ran out after about an hour)
@@ -152,4 +153,58 @@ ev:SetScript("OnEvent", function()
   elseif event == "PLAYER_DEAD" then put("D", "1")
   elseif event == "PLAYER_UNGHOST" then put("D", "0")
   end
+end)
+
+-- ---------- where everyone stands ----------
+-- "X" lines: name:x:y;name:x:y in world yards (SuperWoW UnitPosition). Only people who moved more than a yard,
+-- plus everyone every 10 seconds. Without SuperWoW, "Y" lines use the map position (0-1000) where the zone has a map.
+local posLast, posFull, posT = {}, 0, 0
+local function units()
+  local u = {}
+  local n = GetNumRaidMembers and GetNumRaidMembers() or 0
+  if n > 0 then for i = 1, n do table.insert(u, "raid" .. i) end
+  else table.insert(u, "player"); for i = 1, GetNumPartyMembers() do table.insert(u, "party" .. i) end end
+  return u
+end
+local function samplePos()
+  local now = GetTime()
+  local all = now - posFull >= 10
+  if all then posFull = now end
+  local out, code = {}, "X"
+  local useMap = not UnitPosition
+  if useMap then
+    if WorldMapFrame and WorldMapFrame:IsVisible() then return end
+    if SetMapToCurrentZone then SetMapToCurrentZone() end
+    code = "Y"
+  end
+  for _, u in ipairs(units()) do
+    if UnitExists(u) and not UnitIsDeadOrGhost(u) then
+      local name = UnitName(u)
+      local x, y
+      if useMap then
+        local a, b = GetPlayerMapPosition(u)
+        if a and (a > 0 or b > 0) then x, y = math.floor(a * 1000 + 0.5), math.floor(b * 1000 + 0.5) end
+      else
+        local ok, a, b = pcall(UnitPosition, u)
+        if ok and a then x, y = math.floor(a * 10 + 0.5) / 10, math.floor(b * 10 + 0.5) / 10 end
+      end
+      if name and x then
+        local l = posLast[name]
+        if all or not l or math.abs(l[1] - x) + math.abs(l[2] - y) >= 1 then
+          posLast[name] = { x, y }
+          table.insert(out, name .. ":" .. x .. ":" .. y)
+        end
+      end
+    end
+  end
+  if table.getn(out) > 0 then put(code, table.concat(out, ";")) end
+end
+local pf = CreateFrame("Frame")
+pf:SetScript("OnUpdate", function()
+  if not attach() then return end
+  local now = GetTime()
+  local every = UnitAffectingCombat("player") and 1 or 5
+  if now - posT < every then return end
+  posT = now
+  samplePos()
 end)
