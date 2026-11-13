@@ -199,6 +199,32 @@ local function samplePos()
   end
   if table.getn(out) > 0 then put(code, table.concat(out, ";")) end
 end
+-- "H" lines: name:health%:power%:type;... (type 0 mana, 1 rage, 3 energy). Only in combat, only people whose
+-- health or power moved 3% or more, plus everyone every 10 seconds. Feeds the raid frames on the planner's map.
+local hpLast, hpFull = {}, 0
+local function pct(v, m) if not v or not m or m <= 0 then return 0 end return math.floor(v / m * 100 + 0.5) end
+local function sampleHP()
+  local now = GetTime()
+  local all = now - hpFull >= 10
+  if all then hpFull = now end
+  local out = {}
+  for _, u in ipairs(units()) do
+    if UnitExists(u) then
+      local name = UnitName(u)
+      local h = UnitIsDeadOrGhost(u) and 0 or pct(UnitHealth(u), UnitHealthMax(u))
+      local m = pct(UnitMana(u), UnitManaMax(u))
+      local t = UnitPowerType and UnitPowerType(u) or 0
+      if name then
+        local l = hpLast[name]
+        if all or not l or math.abs(l[1] - h) >= 3 or math.abs(l[2] - m) >= 3 or l[3] ~= t then
+          hpLast[name] = { h, m, t }
+          table.insert(out, name .. ":" .. h .. ":" .. m .. ":" .. t)
+        end
+      end
+    end
+  end
+  if table.getn(out) > 0 then put("H", table.concat(out, ";")) end
+end
 local pf = CreateFrame("Frame")
 pf:SetScript("OnUpdate", function()
   if not attach() then return end
@@ -207,4 +233,5 @@ pf:SetScript("OnUpdate", function()
   if now - posT < every then return end
   posT = now
   samplePos()
+  if every == 1 then sampleHP() end
 end)
