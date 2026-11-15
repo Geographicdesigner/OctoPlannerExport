@@ -1,5 +1,6 @@
 -- Octo Planner Export: fight log (WoW 1.12 / Lua 5.0)
--- /ope log [name]  starts a log (for a whole raid or dungeon); /ope log again stops it.
+-- /ope log [name]  starts a log (for a whole raid or dungeon).
+-- While one is on: /ope log shows it is still on, /ope log stop stops it, /ope log <new name> saves it and starts a new one.
 -- While a log is on, every time you enter and leave combat is saved as one fight, with:
 --   every spell you cast (with SuperWoW), your damage per ability and its full hit table, damage per target and what it was immune to,
 --   damage you took by enemy and ability, your deaths with the hits before them,
@@ -8,6 +9,12 @@
 
 local PREFIX = "|cff9f7aea[Octo Planner Export]|r "
 local function say(msg) DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. msg) end
+-- a big message in the middle of the screen as well as in chat
+local function shout(msg)
+  say(msg)
+  pcall(function() UIErrorsFrame:AddMessage("Octo log: " .. msg, 0.62, 0.48, 0.92, 1, 8) end)
+end
+local function since(t) return t and date("%H:%M", t) or "?" end
 local MAX_LOGS = 10
 local MAX_FIGHTS = 400
 local MAX_NAMES = 200
@@ -320,6 +327,8 @@ for _, e in ipairs({ "CHAT_MSG_COMBAT_SELF_HITS", "CHAT_MSG_COMBAT_SELF_MISSES",
   "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD", "PLAYER_LOGOUT" }) do
   ev:RegisterEvent(e)
 end
+pcall(function() ev:RegisterEvent("PLAYER_CAMPING") end)
+pcall(function() ev:RegisterEvent("PLAYER_QUITING") end)
 pcall(function() ev:RegisterEvent("UNIT_CASTEVENT") end)
 ev:SetScript("OnEvent", function()
   if event == "PLAYER_ENTERING_WORLD" then
@@ -328,12 +337,16 @@ ev:SetScript("OnEvent", function()
       local c = charDB()
       if c and c.logs then
         for _, l in ipairs(c.logs) do if l.live then LOG = l end end
-        if LOG then say("Fight log \"" .. (LOG.label or "log") .. "\" is still on (" .. table.getn(LOG.fights) .. " fights). /ope log stops it.") end
+        if LOG then shout("\"" .. (LOG.label or "log") .. "\" is still recording (since " .. since(LOG.date) .. ", " .. table.getn(LOG.fights) .. " fights). /ope log stop stops it.") end
       end
     end
     return
   end
   if not LOG then return end
+  if event == "PLAYER_CAMPING" or event == "PLAYER_QUITING" then
+    say("\"" .. (LOG.label or "log") .. "\" stays on and carries on when you log back in.")
+    return
+  end
   if event == "UNIT_CASTEVENT" then
     if arg3 ~= "CAST" then return end
     if not MYGUID then local _, g = UnitExists("player"); MYGUID = g end
@@ -356,19 +369,26 @@ function OPE_Log(arg)
     say("All saved fight logs for this character were deleted.")
     return
   end
+  local name = (arg and arg ~= "" and arg ~= "stop") and arg or nil
+  if LOG and arg ~= "stop" and not name then
+    -- a plain /ope log while one is on never stops it
+    shout("\"" .. (LOG.label or "log") .. "\" is already recording (since " .. since(LOG.date) .. ", " .. table.getn(LOG.fights) .. " fights). /ope log stop stops it, /ope log <name> starts a new one.")
+    return
+  end
+  if not LOG and arg == "stop" then say("No log is recording. /ope log [name] starts one.") return end
   if LOG then
     endFight()
     LOG.live = nil
     LOG.ended = time()
-    local fights = table.getn(LOG.fights)
+    local fights, old = table.getn(LOG.fights), (LOG.label or "log")
     LOG = nil
-    say("Fight log saved: " .. fights .. " fights. /reload or log out to write the file, then upload it to the planner.")
-    return
+    say("Saved \"" .. old .. "\": " .. fights .. " fights. /reload or log out to write the file, then upload it to the planner.")
+    if not name then return end
   end
   c.logs = c.logs or {}
-  LOG = { label = (arg and arg ~= "") and arg or nil, date = time(), zone = GetRealZoneText and GetRealZoneText() or "", live = 1, fights = {} }
+  LOG = { label = name, date = time(), zone = GetRealZoneText and GetRealZoneText() or "", live = 1, fights = {} }
   table.insert(c.logs, LOG)
   while table.getn(c.logs) > MAX_LOGS do table.remove(c.logs, 1) end
   if UnitAffectingCombat("player") then startFight() end
-  say("Fight log on" .. (LOG.label and (" \"" .. LOG.label .. "\"") or "") .. ". Everything is recorded until you type /ope log again. A /reload keeps it going.")
+  shout("\"" .. (LOG.label or "log") .. "\" is recording until /ope log stop. A /reload or logging out keeps it going.")
 end

@@ -39,9 +39,12 @@ Fight log (raids and dungeons)
                       mana and health, your group and any swaps, your target, zone and resets.
                       Each fight also keeps a summary: hit table per ability, damage per target,
                       damage you took, deaths, consumables and buff uptime.
-  /ope log            type it again to stop.
+  /ope log            while one is on: shows that it is still recording (it never stops it).
+  /ope log stop       stop and save it.
+  /ope log <new name> save the running one and start a new one.
   /ope log clear      delete saved logs.
-  A /reload or disconnect does not stop the log. Upload the file afterwards.
+  A /reload, disconnect or logging out does not stop the log. When you log back in, a message in
+  the middle of the screen says it is still recording. Upload the file afterwards.
 
 Upload
   After logging out, upload  WTF/Account/<ACCOUNT>/SavedVariables/OctoPlannerExport.lua

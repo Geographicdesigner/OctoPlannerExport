@@ -40,7 +40,8 @@ local CHN = {}
 for i, e in ipairs(CH) do CHN[e] = i end
 
 local LOG, G0 = nil, 0
-local full = false
+local full, warned = false, false
+local gapAt = nil
 local function clock() return GetTime() - G0 end
 -- (re)attach to the running log; after a /reload, line the clock up again from the real time
 local function attach()
@@ -49,7 +50,14 @@ local function attach()
     LOG = l; full = false
     if LOG then
       if not LOG.t0 then LOG.t0 = time(); LOG.ev = {}; G0 = GetTime()
-      else G0 = GetTime() - (time() - LOG.t0) end
+      else
+        G0 = GetTime() - (time() - LOG.t0)
+        -- picked up again after a log out or disconnect: note how long nothing was recorded
+        local ev, last = LOG.ev or {}, nil
+        local n = table.getn(ev)
+        if n > 0 then local _, _, t = string.find(ev[n], "^([%d%.]+)\t"); last = tonumber(t) end
+        if last and (time() - LOG.t0) - last > 60 then gapAt = math.floor((time() - LOG.t0) - last) end
+      end
       LOG.ev = LOG.ev or {}
     end
   end
@@ -60,8 +68,14 @@ local function put(code, text)
   local ev = LOG.ev
   if table.getn(ev) >= MAX_EV then
     full = true
-    DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r The full record is full (" .. MAX_EV .. " lines). Fight summaries keep going. /ope log twice starts a fresh one.")
+    DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r The full record is full (" .. MAX_EV .. " lines). Fight summaries keep going. /ope log <new name> starts a fresh one.")
+    pcall(function() UIErrorsFrame:AddMessage("Octo log is full. /ope log <new name> starts a new one.", 1, 0.3, 0.3, 1, 8) end)
     return
+  end
+  if gapAt then local g = gapAt; gapAt = nil; table.insert(ev, string.format("%.1f\t%s\t%s", clock(), "L", g)) end
+  if not warned and table.getn(ev) >= MAX_EV * 0.9 then
+    warned = true
+    DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r The full record is 90% full. /ope log <new name> saves it and starts a new one.")
   end
   table.insert(ev, string.format("%.1f\t%s\t%s", clock(), code, text or ""))
 end
