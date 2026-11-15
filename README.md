@@ -4,6 +4,10 @@ Saves your gear, bags, bank, talents and spellbook for the [Octo Druid Gear Plan
 
 **[Download OctoPlannerExport.zip](https://github.com/Geographicdesigner/OctoPlannerExport/raw/main/OctoPlannerExport.zip)**
 
+### Needed for fight logs
+- **SuperWoW** (client mod): where everyone stands, who cast what on whom. Get it only from the official page: [github.com/balakethelock/SuperWoW](https://github.com/balakethelock/SuperWoW) ([releases](https://github.com/balakethelock/SuperWoW/releases)). Without it the addon still records, but the map has no positions.
+- **UnitXP Service Pack 3** (optional, for the cat and bear macros): distance and behind checks.
+
 | Command | What it does |
 |---|---|
 | `/ope dummy [name]` | Starts recording your damage. The clock starts at your first hit. |

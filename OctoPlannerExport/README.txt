@@ -50,3 +50,7 @@ Upload
 Updating from version 1
   Replace the folder and /reload (or relog). A running scan keeps its progress.
   Items scanned with version 1 have no icon yet; /ope scan revisits them to add icons.
+
+NEEDED FOR FIGHT LOGS
+  SuperWoW, from the official page only: https://github.com/balakethelock/SuperWoW/releases
+  Without it the addon still records, but the map on the Fights page has no positions.
