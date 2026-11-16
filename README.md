@@ -4,6 +4,8 @@ Saves your gear, bags, bank, talents and spellbook for the [Octo Druid Gear Plan
 
 **[Download OctoPlannerExport.zip](https://github.com/Geographicdesigner/OctoPlannerExport/raw/main/OctoPlannerExport.zip)**
 
+**Turtle WoW launcher:** add this repository's link (`https://github.com/Geographicdesigner/OctoPlannerExport`) in the launcher's addon list and it installs and updates by itself. The addon files sit at the top of the repository for that.
+
 ### Needed for fight logs
 - **SuperWoW** (client mod): where everyone stands, who cast what on whom. Get it only from the official page: [github.com/balakethelock/SuperWoW](https://github.com/balakethelock/SuperWoW) ([releases](https://github.com/balakethelock/SuperWoW/releases)). Without it the addon still records, but the map has no positions.
 - **UnitXP Service Pack 3** (optional, for the cat and bear macros): distance and behind checks.
