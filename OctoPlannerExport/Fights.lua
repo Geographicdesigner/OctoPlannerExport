@@ -369,13 +369,16 @@ function OPE_Log(arg)
     say("All saved fight logs for this character were deleted.")
     return
   end
-  local name = (arg and arg ~= "" and arg ~= "stop") and arg or nil
-  if LOG and arg ~= "stop" and not name then
+  -- stop, end, off, done and finish all stop the log (never start one with that name)
+  local lw = string.lower(arg or "")
+  local stop = lw == "stop" or lw == "end" or lw == "off" or lw == "done" or lw == "finish"
+  local name = (arg and arg ~= "" and not stop) and arg or nil
+  if LOG and not stop and not name then
     -- a plain /ope log while one is on never stops it
     shout("\"" .. (LOG.label or "log") .. "\" is already recording (since " .. since(LOG.date) .. ", " .. table.getn(LOG.fights) .. " fights). /ope log stop stops it, /ope log <name> starts a new one.")
     return
   end
-  if not LOG and arg == "stop" then say("No log is recording. /ope log [name] starts one.") return end
+  if not LOG and stop then say("No log is recording. /ope log [name] starts one.") return end
   if LOG then
     endFight()
     if OPE_LogFlush then OPE_LogFlush(true) end
@@ -384,8 +387,16 @@ function OPE_Log(arg)
     LOG.live = nil
     LOG.ended = time()
     local fights, old = table.getn(LOG.fights), (LOG.label or "log")
-    LOG = nil
-    say("Saved \"" .. old .. "\": " .. fights .. " fights. /reload or log out to write the file, then upload it to the planner.")
+    -- a log with no fight and almost nothing in it (started by mistake) isn't kept
+    if fights == 0 and table.getn(LOG.ev or {}) < 200 and not LOG.parts then
+      for i = table.getn(c.logs), 1, -1 do if c.logs[i] == LOG then table.remove(c.logs, i) end end
+      LOG = nil
+      say("Stopped \"" .. old .. "\". It had no fights, so it wasn't kept.")
+      if not name then return end
+    else
+      LOG = nil
+      say("Saved \"" .. old .. "\": " .. fights .. " fights. /reload or log out to write the file, then upload it to the planner.")
+    end
     if not name then return end
   end
   c.logs = c.logs or {}
@@ -397,4 +408,5 @@ function OPE_Log(arg)
   if LoggingCombat and not LoggingCombat() then LoggingCombat(1); LOG.cl = 1 end
   if CombatLogAdd then pcall(CombatLogAdd, "OCTO_LOG_START " .. (LOG.label or "log") .. " " .. LOG.date) end
   shout("\"" .. (LOG.label or "log") .. "\" is recording until /ope log stop. A /reload or logging out keeps it going.")
+  say("Addon " .. (GetAddOnMetadata and GetAddOnMetadata("OctoPlannerExport", "Version") or "?") .. (ExportFile and ", writing parts to the imports folder" or ", saving in the addon file (no SuperWoW file writing found)") .. ".")
 end

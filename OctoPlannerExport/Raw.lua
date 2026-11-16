@@ -294,7 +294,8 @@ local function sampleBoss()
     local t = u .. "target"
     if UnitExists(t) and UnitCanAttack("player", t) and not UnitIsDead(t) then
       local c, lv = UnitClassification(t), UnitLevel(t)
-      if c == "worldboss" or lv == -1 then
+      -- raid bosses (skull level), and dungeon bosses: elite and at least 2 levels above you
+      if c == "worldboss" or lv == -1 or ((c == "elite" or c == "rareelite") and lv >= (UnitLevel("player") or 60) + 2) then
         local _, guid = UnitExists(t)
         local name = UnitName(t)
         local key = guid or name

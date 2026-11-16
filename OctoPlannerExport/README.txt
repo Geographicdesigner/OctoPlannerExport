@@ -40,7 +40,7 @@ Fight log (raids and dungeons)
                       Each fight also keeps a summary: hit table per ability, damage per target,
                       damage you took, deaths, consumables and buff uptime.
   /ope log            while one is on: shows that it is still recording (it never stops it).
-  /ope log stop       stop and save it.
+  /ope log stop       stop and save it (end, off, done and finish work too).
   /ope log <new name> save the running one and start a new one.
   /ope log clear      delete saved logs.
   With SuperWoW the log is also written in parts to the game's "imports" folder (octo_<start>_001.txt,
