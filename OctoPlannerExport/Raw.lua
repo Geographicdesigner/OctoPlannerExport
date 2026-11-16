@@ -56,6 +56,7 @@ local function attach()
         local ev, last = LOG.ev or {}, nil
         local n = table.getn(ev)
         if n > 0 then local _, _, t = string.find(ev[n], "^([%d%.]+)\t"); last = tonumber(t) end
+        last = last or LOG.lastT
         if last and (time() - LOG.t0) - last > 60 then gapAt = math.floor((time() - LOG.t0) - last) end
       end
       LOG.ev = LOG.ev or {}
@@ -63,8 +64,43 @@ local function attach()
   end
   return LOG
 end
+-- ---------- parts written to files (SuperWoW ExportFile) ----------
+-- With SuperWoW the record is written in parts to the game's "imports" folder (octo_<start>_001.txt, ...),
+-- so it never fills up and a crash only loses the last few minutes. Only lines that were written and read
+-- back are taken out of the saved file. Without SuperWoW everything stays in the saved file as before.
+local CHUNK = 15000
+local exportBroken, exportSaid = false, false
+local function flush(force)
+  if not LOG or exportBroken or not ExportFile or not ImportFile then return end
+  local ev = LOG.ev
+  local n = table.getn(ev)
+  if n == 0 or (not force and n < CHUNK) then return end
+  local part = (LOG.parts or 0) + 1
+  local name = string.format("octo_%d_%03d.txt", math.floor(LOG.t0 or 0), part)
+  local head = "#octo\t" .. (UnitName("player") or "?") .. "\t" .. (GetRealmName and GetRealmName() or "") .. "\t" .. (LOG.t0 or 0) .. "\t" .. part .. "\t" .. (LOG.label or "")
+  local text = head .. "\n" .. table.concat(ev, "\n") .. "\n"
+  local ok = pcall(ExportFile, name, text)
+  local okr, got = pcall(ImportFile, name)
+  if not ok or not okr or type(got) ~= "string" or string.len(got) < string.len(text) - 2 then
+    exportBroken = true
+    DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r Could not write the log to the game's imports folder (make a folder named imports next to WoW.exe). It stays in the saved file instead.")
+    return
+  end
+  LOG.parts = part
+  LOG.files = LOG.files or {}
+  table.insert(LOG.files, name)
+  LOG.ev = {}
+  full, warned = false, false
+  if not exportSaid then
+    exportSaid = true
+    DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r The log is being written in parts to your game's imports folder (" .. name .. "). Upload those files together with OctoPlannerExport.lua.")
+  end
+end
+OPE_LogFlush = flush
+
 local function put(code, text)
   if not attach() or full then return end
+  if table.getn(LOG.ev) >= CHUNK * 2 or (table.getn(LOG.ev) >= CHUNK and not UnitAffectingCombat("player")) then flush() end
   local ev = LOG.ev
   if table.getn(ev) >= MAX_EV then
     full = true
@@ -77,7 +113,9 @@ local function put(code, text)
     warned = true
     DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r The full record is 90% full. /ope log <new name> saves it and starts a new one.")
   end
-  table.insert(ev, string.format("%.1f\t%s\t%s", clock(), code, text or ""))
+  local c = clock()
+  LOG.lastT = c
+  table.insert(ev, string.format("%.1f\t%s\t%s", c, code, text or ""))
 end
 
 -- ---------- group ----------
@@ -173,6 +211,7 @@ end)
 -- "X" lines: name:x:y;name:x:y in world yards (SuperWoW UnitPosition). Only people who moved more than a yard,
 -- plus everyone every 10 seconds. Without SuperWoW, "Y" lines use the map position (0-1000) where the zone has a map.
 local posLast, posFull, posT = {}, 0, 0
+local posNow = {}
 local function units()
   local u = {}
   local n = GetNumRaidMembers and GetNumRaidMembers() or 0
@@ -185,6 +224,7 @@ local function samplePos()
   local all = now - posFull >= 10
   if all then posFull = now end
   local out, code = {}, "X"
+  posNow = {}
   local useMap = not UnitPosition
   if useMap then
     if WorldMapFrame and WorldMapFrame:IsVisible() then return end
@@ -200,7 +240,7 @@ local function samplePos()
         if a and (a > 0 or b > 0) then x, y = math.floor(a * 1000 + 0.5), math.floor(b * 1000 + 0.5) end
       else
         local ok, a, b = pcall(UnitPosition, u)
-        if ok and a then x, y = math.floor(a * 10 + 0.5) / 10, math.floor(b * 10 + 0.5) / 10 end
+        if ok and a then x, y = math.floor(a * 10 + 0.5) / 10, math.floor(b * 10 + 0.5) / 10; table.insert(posNow, { u, a, b }) end
       end
       if name and x then
         local l = posLast[name]
@@ -213,10 +253,79 @@ local function samplePos()
   end
   if table.getn(out) > 0 then put(code, table.concat(out, ";")) end
 end
+-- "B" lines: where the bosses stand and which way they face, from what the raid has targeted (SuperWoW).
+-- boss:x:y:facing:health%:target;...  facing in radians when the game gives it, else empty (the planner then
+-- points the boss at its target). Only bosses (skull level or world boss), only in combat, only when something
+-- changed, plus every 5 seconds.
+local function pct(v, m) if not v or not m or m <= 0 then return 0 end return math.floor(v / m * 100 + 0.5) end
+local bossLast, bossFull = {}, 0
+-- SuperWoW only gives positions of friendly units, so a boss is found from how far raid members are from it
+-- (UnitXP distanceBetween), like a GPS: least squares over up to 8 members. Rough by a yard or two.
+local function bossPos(t)
+  local ok, a, b = pcall(UnitPosition, t)
+  if ok and a then return a, b end
+  if not UnitXP then return nil end
+  local P = {}
+  for _, m in ipairs(posNow) do
+    local okd, d = pcall(UnitXP, "distanceBetween", m[1], t)
+    if okd and type(d) == "number" and d >= 0 and d < 100 then table.insert(P, { m[2], m[3], d }) end
+    if table.getn(P) >= 8 then break end
+  end
+  local n = table.getn(P)
+  if n < 3 then return nil end
+  local x0, y0, d0 = P[1][1], P[1][2], P[1][3]
+  local a11, a12, a22, b1, b2 = 0, 0, 0, 0, 0
+  for i = 2, n do
+    local ax, ay = 2 * (P[i][1] - x0), 2 * (P[i][2] - y0)
+    local rhs = d0 * d0 - P[i][3] * P[i][3] + P[i][1] * P[i][1] - x0 * x0 + P[i][2] * P[i][2] - y0 * y0
+    a11 = a11 + ax * ax; a12 = a12 + ax * ay; a22 = a22 + ay * ay; b1 = b1 + ax * rhs; b2 = b2 + ay * rhs
+  end
+  local det = a11 * a22 - a12 * a12
+  if math.abs(det) < 0.001 then return nil end
+  return (b1 * a22 - b2 * a12) / det, (a11 * b2 - a12 * b1) / det
+end
+local function sampleBoss()
+  if not UnitPosition then return end
+  local now = GetTime()
+  local all = now - bossFull >= 5
+  if all then bossFull = now end
+  local out, seen = {}, {}
+  for _, u in ipairs(units()) do
+    local t = u .. "target"
+    if UnitExists(t) and UnitCanAttack("player", t) and not UnitIsDead(t) then
+      local c, lv = UnitClassification(t), UnitLevel(t)
+      if c == "worldboss" or lv == -1 then
+        local _, guid = UnitExists(t)
+        local name = UnitName(t)
+        local key = guid or name
+        if name and not seen[key] then
+          seen[key] = true
+          local a, b = bossPos(t)
+          if a then
+            local x, y = math.floor(a * 10 + 0.5) / 10, math.floor(b * 10 + 0.5) / 10
+            local f = ""
+            if UnitFacing then
+              local okf, v = pcall(UnitFacing, t)
+              if okf and v then f = math.floor(v * 100 + 0.5) / 100 end
+            end
+            local hp = pct(UnitHealth(t), UnitHealthMax(t))
+            local tg = UnitName(t .. "target") or ""
+            local l = bossLast[key]
+            local moved = not l or math.abs(l[1] - x) + math.abs(l[2] - y) >= 1 or l[3] ~= f or l[5] ~= tg or math.abs(l[4] - hp) >= 3
+            if all or moved then
+              bossLast[key] = { x, y, f, hp, tg }
+              table.insert(out, name .. ":" .. x .. ":" .. y .. ":" .. f .. ":" .. hp .. ":" .. tg)
+            end
+          end
+        end
+      end
+    end
+  end
+  if table.getn(out) > 0 then put("B", table.concat(out, ";")) end
+end
 -- "H" lines: name:health%:power%:type;... (type 0 mana, 1 rage, 3 energy). Only in combat, only people whose
 -- health or power moved 3% or more, plus everyone every 10 seconds. Feeds the raid frames on the planner's map.
 local hpLast, hpFull = {}, 0
-local function pct(v, m) if not v or not m or m <= 0 then return 0 end return math.floor(v / m * 100 + 0.5) end
 local function sampleHP()
   local now = GetTime()
   local all = now - hpFull >= 10
@@ -247,5 +356,5 @@ pf:SetScript("OnUpdate", function()
   if now - posT < every then return end
   posT = now
   samplePos()
-  if every == 1 then sampleHP() end
+  if every == 1 then sampleHP(); sampleBoss() end
 end)

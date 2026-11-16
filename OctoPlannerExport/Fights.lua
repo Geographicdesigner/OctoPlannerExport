@@ -378,6 +378,9 @@ function OPE_Log(arg)
   if not LOG and arg == "stop" then say("No log is recording. /ope log [name] starts one.") return end
   if LOG then
     endFight()
+    if OPE_LogFlush then OPE_LogFlush(true) end
+    if CombatLogAdd then pcall(CombatLogAdd, "OCTO_LOG_END " .. (LOG.label or "log")) end
+    if LOG.cl and LoggingCombat then LoggingCombat(0) end
     LOG.live = nil
     LOG.ended = time()
     local fights, old = table.getn(LOG.fights), (LOG.label or "log")
@@ -390,5 +393,8 @@ function OPE_Log(arg)
   table.insert(c.logs, LOG)
   while table.getn(c.logs) > MAX_LOGS do table.remove(c.logs, 1) end
   if UnitAffectingCombat("player") then startFight() end
+  -- the game's own combat log file too (Logs\WoWCombatLog.txt), for other log sites
+  if LoggingCombat and not LoggingCombat() then LoggingCombat(1); LOG.cl = 1 end
+  if CombatLogAdd then pcall(CombatLogAdd, "OCTO_LOG_START " .. (LOG.label or "log") .. " " .. LOG.date) end
   shout("\"" .. (LOG.label or "log") .. "\" is recording until /ope log stop. A /reload or logging out keeps it going.")
 end
