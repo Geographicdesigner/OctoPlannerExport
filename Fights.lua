@@ -382,6 +382,7 @@ function OPE_Log(arg)
   if LOG then
     endFight()
     if OPE_LogFlush then OPE_LogFlush(true) end
+    if OPE_LogJoin then OPE_LogJoin(LOG) end
     if CombatLogAdd then pcall(CombatLogAdd, "OCTO_LOG_END " .. (LOG.label or "log")) end
     if LOG.cl and LoggingCombat then LoggingCombat(0) end
     LOG.live = nil

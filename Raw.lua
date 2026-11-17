@@ -93,10 +93,39 @@ local function flush(force)
   full, warned = false, false
   if not exportSaid then
     exportSaid = true
-    DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r The log is being written in parts to your game's imports folder (" .. name .. "). Upload those files together with OctoPlannerExport.lua.")
+    DEFAULT_CHAT_FRAME:AddMessage("|cff9f7aea[Octo Planner Export]|r The log is being written in parts to your game's imports folder (" .. name .. "). They go back into OctoPlannerExport.lua when the log stops or you log in again, so that one file is all you upload.")
   end
 end
 OPE_LogFlush = flush
+
+-- the parts are read back into the saved file (log.full), so OctoPlannerExport.lua alone holds the whole log:
+-- when the log stops, and at login for any log with parts that aren't in yet. The part files stay as a backup.
+local function join(L)
+  if not L or not L.files or not ImportFile then return end
+  local out, n = {}, 0
+  for _, name in ipairs(L.files) do
+    local ok, text = pcall(ImportFile, name)
+    -- a part is missing: keep what was saved before, the planner names the missing files
+    if not ok or type(text) ~= "string" then return end
+    for line in string.gfind(text, "[^\r\n]+") do
+      if string.sub(line, 1, 5) ~= "#octo" then n = n + 1; out[n] = line end
+    end
+  end
+  L.full = out
+  L.fullParts = table.getn(L.files)
+end
+OPE_LogJoin = join
+local jf = CreateFrame("Frame")
+jf:RegisterEvent("PLAYER_ENTERING_WORLD")
+jf:SetScript("OnEvent", function()
+  jf:UnregisterEvent("PLAYER_ENTERING_WORLD")
+  local db = OctoPlannerExportDB
+  local c = db and db.chars and db.chars[(UnitName("player") or "?") .. " - " .. (GetRealmName() or "?")]
+  if not c or not c.logs then return end
+  for _, L in ipairs(c.logs) do
+    if L.files and (L.fullParts or 0) < table.getn(L.files) then join(L) end
+  end
+end)
 
 local function put(code, text)
   if not attach() or full then return end
@@ -161,8 +190,11 @@ local function nameOf(guid)
   if not guid or guid == "" or guid == "0x0000000000000000" then return "" end
   local n = names[guid]
   if n then return n end
-  n = UnitName(guid) or ""
-  if n ~= "" then names[guid] = n end
+  -- your own casts: right after a login or /reload the game can still answer "Unknown" for your own GUID
+  local _, me = UnitExists("player")
+  if guid == me then n = UnitName("player") or "" else n = UnitName(guid) or "" end
+  -- "Unknown" is never kept, so the real name is asked again on the next cast
+  if n ~= "" and n ~= "Unknown" and n ~= UNKNOWNOBJECT then names[guid] = n end
   return n
 end
 

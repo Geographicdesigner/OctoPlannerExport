@@ -44,9 +44,10 @@ Fight log (raids and dungeons)
   /ope log <new name> save the running one and start a new one.
   /ope log clear      delete saved logs.
   With SuperWoW the log is also written in parts to the game's "imports" folder (octo_<start>_001.txt,
-  octo_<start>_002.txt, ...), so it never fills up and a crash only loses the last few minutes. Upload
-  those files together with OctoPlannerExport.lua (pick them all at once). If the folder is missing, make
-  a folder named imports next to WoW.exe. /ope log also turns on the game's own combat log
+  octo_<start>_002.txt, ...), so it never fills up and a crash only loses the last few minutes. The
+  parts are read back into OctoPlannerExport.lua when the log stops (/ope log stop) or when you log in
+  again, so that one file is all you upload. If the folder is missing, make a folder named imports next
+  to WoW.exe. /ope log also turns on the game's own combat log
   (Logs/WoWCombatLog.txt) for other log sites, and turns it off again with /ope log stop.
   With SuperWoW, "B" lines record where bosses stand and whom they face (from the raid's targets).
   A /reload, disconnect or logging out does not stop the log. When you log back in, a message in
