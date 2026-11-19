@@ -119,12 +119,15 @@ local function esc(s)
   s = string.gsub(s, "\n", "\\n"); s = string.gsub(s, "\r", "\\r"); s = string.gsub(s, "\t", "\\t")
   return '"' .. s .. '"'
 end
+-- Lua 5.0's table.getn reads a field called "n", so {c=1,u=2,n=2} looked like a list
+-- and was written as [null,null]. A list now needs only number keys, starting at 1.
 local function isArray(t)
-  local n = table.getn(t)
-  if n == 0 then return next(t) == nil end
   local k = 0
-  for _ in pairs(t) do k = k + 1 end
-  return k == n
+  for key in pairs(t) do
+    if type(key) ~= "number" then return false end
+    k = k + 1
+  end
+  return k == 0 or t[1] ~= nil
 end
 function OPE_Json(v, depth)
   depth = depth or 0
@@ -138,7 +141,8 @@ function OPE_Json(v, depth)
   elseif tv == "table" and depth < 8 then
     local out = {}
     if isArray(v) and next(v) ~= nil then
-      for i = 1, table.getn(v) do table.insert(out, OPE_Json(v[i], depth + 1)) end
+      local i = 1
+      while v[i] ~= nil do table.insert(out, OPE_Json(v[i], depth + 1)); i = i + 1 end
       return "[" .. table.concat(out, ",") .. "]"
     end
     for k, x in pairs(v) do
