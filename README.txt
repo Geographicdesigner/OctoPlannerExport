@@ -53,6 +53,25 @@ Fight log (raids and dungeons)
   A /reload, disconnect or logging out does not stop the log. When you log back in, a message in
   the middle of the screen says it is still recording. Upload the file afterwards.
 
+Check your game mods
+  /ope dll            lists SuperWoW, UnitXP Service Pack 3, Nampower and SuperMacro with their versions,
+                      with OK or MISSING next to each. The macros need all four (SuperMacro must be the
+                      Turtle WoW version). The same list is saved with every log, so the planner shows who
+                      recorded with which versions. It is also shown when you start a log.
+  Some SuperWoW versions give positions in the opposite order. The addon works out the order by itself
+  when you walk around outdoors for a few seconds, and the planner turns those maps the right way.
+
+From 5.9
+  Every fight summary is also written into the parts in the imports folder, so after a crash the
+  imports folder alone still has the whole log.
+  The whole record is saved as one long text per part. 5.8 saved one text per line, and a full raid
+  (Molten Core is about 265,000 lines) went over what the game can load: the file failed to load at the
+  next login and the add-on started again from empty. 5.9 rewrites old 5.8 records the new way at login.
+  Only your 3 newest logs keep their whole record inside OctoPlannerExport.lua, so the file stays small
+  and saves quickly. Older logs keep their fight summaries; their whole record stays in the imports folder.
+  Remember: the game only writes OctoPlannerExport.lua when you /reload, log out or quit normally.
+  Do that before you upload it.
+
 Upload
   After logging out, upload  WTF/Account/<ACCOUNT>/SavedVariables/OctoPlannerExport.lua
   to the planner, or a zip of your whole WTF folder (it is picked up next to your bag addon file).

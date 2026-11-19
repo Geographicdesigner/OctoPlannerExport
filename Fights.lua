@@ -145,6 +145,8 @@ local function endFight()
     F.name, F.boss = fightName(F)
     table.insert(LOG.fights, F)
     while table.getn(LOG.fights) > MAX_FIGHTS do table.remove(LOG.fights, 1) end
+    -- the summary also goes into the record (5.9), so the imports folder alone has everything after a crash
+    if OPE_RawPut and OPE_Json then pcall(function() OPE_RawPut("F", OPE_Json(F)) end) end
   end
   F = nil
 end
@@ -408,6 +410,8 @@ function OPE_Log(arg)
   -- the game's own combat log file too (Logs\WoWCombatLog.txt), for other log sites
   if LoggingCombat and not LoggingCombat() then LoggingCombat(1); LOG.cl = 1 end
   if CombatLogAdd then pcall(CombatLogAdd, "OCTO_LOG_START " .. (LOG.label or "log") .. " " .. LOG.date) end
+  if OPE_ClientInfo then LOG.client = OPE_ClientInfo(); c.client = LOG.client end
   shout("\"" .. (LOG.label or "log") .. "\" is recording until /ope log stop. A /reload or logging out keeps it going.")
   say("Addon " .. (GetAddOnMetadata and GetAddOnMetadata("OctoPlannerExport", "Version") or "?") .. (ExportFile and ", writing parts to the imports folder" or ", saving in the addon file (no SuperWoW file writing found)") .. ".")
+  if OPE_ClientSay then OPE_ClientSay() end
 end

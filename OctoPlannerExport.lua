@@ -341,6 +341,8 @@ SlashCmdList["OCTOPLANNEREXPORT"] = function(msg)
     OPE_CCWatch()
   elseif cmd == "log" then
     OPE_Log(arg)
+  elseif cmd == "dll" or cmd == "check" or cmd == "version" then
+    OPE_ClientSay()
   elseif cmd == "dummy" then
     OPE_Dummy(arg)
   elseif cmd == "talents" or cmd == "save" then
@@ -359,6 +361,7 @@ SlashCmdList["OCTOPLANNEREXPORT"] = function(msg)
     say("/ope dummy [name]  record your damage on a dummy, again to stop    /ope dummy clear  delete saved runs")
     say("/ope log [name]  record everything in a raid or dungeon (fights, casts, group, time between pulls)    /ope log stop (or end)  stop it    /ope log clear  delete saved logs")
     say("/ope cc  show in chat which ability uses each Clearcasting (on/off)")
+    say("/ope dll  check SuperWoW, UnitXP, Nampower and SuperMacro and their versions")
     say("When done, log out and upload SavedVariables/OctoPlannerExport.lua to the planner.")
   end
 end

@@ -69,6 +69,7 @@ end
 -- so it never fills up and a crash only loses the last few minutes. Only lines that were written and read
 -- back are taken out of the saved file. Without SuperWoW everything stays in the saved file as before.
 local CHUNK = 15000
+local KEEP_FULL = 3   -- logs that keep their whole record in the saved file
 local exportBroken, exportSaid = false, false
 local function flush(force)
   if not LOG or exportBroken or not ExportFile or not ImportFile then return end
@@ -102,16 +103,20 @@ OPE_LogFlush = flush
 -- when the log stops, and at login for any log with parts that aren't in yet. The part files stay as a backup.
 local function join(L)
   if not L or not L.files or not ImportFile then return end
-  local out, n = {}, 0
-  for _, name in ipairs(L.files) do
+  -- 5.9: one long string per part, never one string per line. WoW loads the saved file as one Lua chunk, and
+  -- Lua 5.0 allows only about 262,000 different strings in it: a full raid (MC is ~265,000 lines) went over,
+  -- the game could not load the file, and the add-on started again from empty (all logs lost).
+  local out = {}
+  for i, name in ipairs(L.files) do
     local ok, text = pcall(ImportFile, name)
     -- a part is missing: keep what was saved before, the planner names the missing files
     if not ok or type(text) ~= "string" then return end
-    for line in string.gfind(text, "[^\r\n]+") do
-      if string.sub(line, 1, 5) ~= "#octo" then n = n + 1; out[n] = line end
-    end
+    text = string.gsub(text, "#octo[^\r\n]*[\r\n]*", "")
+    text = string.gsub(text, "\r", "")
+    out[i] = text
   end
   L.full = out
+  L.fullFmt = 2
   L.fullParts = table.getn(L.files)
 end
 OPE_LogJoin = join
@@ -122,8 +127,14 @@ jf:SetScript("OnEvent", function()
   local db = OctoPlannerExportDB
   local c = db and db.chars and db.chars[(UnitName("player") or "?") .. " - " .. (GetRealmName() or "?")]
   if not c or not c.logs then return end
-  for _, L in ipairs(c.logs) do
-    if L.files and (L.fullParts or 0) < table.getn(L.files) then join(L) end
+  if OPE_ClientInfo then c.client = OPE_ClientInfo() end
+  -- only the newest logs keep their whole record inside OctoPlannerExport.lua, so the file stays small and
+  -- saves quickly. Older logs keep their fight summaries; their whole record stays in the imports folder.
+  local n = table.getn(c.logs)
+  for i, L in ipairs(c.logs) do
+    if i <= n - KEEP_FULL then
+      if L.full and L.files then L.full = nil; L.fullParts = nil; L.trimmed = 1 end
+    elseif L.files and not L.trimmed and ((L.fullParts or 0) < table.getn(L.files) or (L.full and L.fullFmt ~= 2)) then join(L) end
   end
 end)
 
@@ -146,6 +157,7 @@ local function put(code, text)
   LOG.lastT = c
   table.insert(ev, string.format("%.1f\t%s\t%s", c, code, text or ""))
 end
+OPE_RawPut = put
 
 -- ---------- group ----------
 local lastGroup = ""
@@ -212,6 +224,10 @@ ev:SetScript("OnEvent", function()
     -- first event of a new or resumed log: write where we are and who is with us
     wasOn = true
     put("Z", (GetRealZoneText and GetRealZoneText() or "") .. "|" .. (GetSubZoneText and GetSubZoneText() or ""))
+    -- which game mods and versions recorded this (5.9), and the order of the position numbers once known
+    if OPE_ClientLine then put("V", OPE_ClientLine()) end
+    local db = OctoPlannerExportDB
+    if db and db.xy and db.xy.order then put("O", db.xy.order) end
     checkGroup(true); last = {}; power(); health()
   end
   local c = CHN[event]
