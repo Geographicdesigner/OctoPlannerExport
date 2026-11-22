@@ -52,6 +52,10 @@ Fight log (raids and dungeons)
   With SuperWoW, "B" lines record where bosses stand and whom they face (from the raid's targets).
   A /reload, disconnect or logging out does not stop the log. When you log back in, a message in
   the middle of the screen says it is still recording. Upload the file afterwards.
+  If the game crashes or you have to close it, the same log carries on when you log back in
+  (octo_run.txt in the imports folder remembers it).
+  In a raid with no log running, one starts by itself (named after the raid, like bwl) and says
+  so in chat. After you stop one yourself, it doesn't start again in that raid for 6 hours.
 
 Check your game mods
   /ope dll            lists SuperWoW, UnitXP Service Pack 3, Nampower and SuperMacro with their versions,

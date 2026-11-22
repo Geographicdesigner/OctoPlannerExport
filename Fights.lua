@@ -320,13 +320,47 @@ local function addPreCasts()
   preCasts = {}
 end
 
+-- ---------- 5.10: never lose a raid ----------
+-- After a crash or a forced restart OctoPlannerExport.lua is not written, so the running log was forgotten.
+-- The imports folder has a note of it (octo_run.txt, written with every part): carry on with the same log.
+local function resumeAfterCrash(c)
+  local R = OPE_RunRead and OPE_RunRead()
+  if not R or not R.t0 or time() - R.t0 > 8 * 3600 then return end
+  c.logs = c.logs or {}
+  for _, l in ipairs(c.logs) do if l.t0 and math.floor(l.t0) == R.t0 then return end end
+  local files = {}
+  for i = 1, R.parts or 0 do table.insert(files, string.format("octo_%d_%03d.txt", R.t0, i)) end
+  LOG = { label = R.label, date = R.date or R.t0, zone = R.zone or "", live = 1, fights = {}, t0 = R.t0,
+    parts = R.parts, files = (R.parts or 0) > 0 and files or nil, ev = {}, resumed = 1 }
+  table.insert(c.logs, LOG)
+  while table.getn(c.logs) > MAX_LOGS do table.remove(c.logs, 1) end
+  if OPE_ClientInfo then LOG.client = OPE_ClientInfo() end
+  if LoggingCombat and not LoggingCombat() then LoggingCombat(1); LOG.cl = 1 end
+  shout("\"" .. (LOG.label or "log") .. "\" carries on after the game closed (since " .. since(LOG.date) .. "). /ope log stop stops it.")
+end
+-- in a raid with no log running, start one by itself (not again in a raid where you stopped it yourself)
+local RAIDS = { ["Molten Core"] = "mc", ["Onyxia's Lair"] = "ony", ["Blackwing Lair"] = "bwl", ["Zul'Gurub"] = "zg",
+  ["Ruins of Ahn'Qiraj"] = "aq20", ["Ahn'Qiraj"] = "aq40", ["Temple of Ahn'Qiraj"] = "aq40", ["Naxxramas"] = "naxx",
+  ["Emerald Sanctum"] = "es", ["Karazhan"] = "kara10", ["Tower of Karazhan"] = "kara40", ["Lower Karazhan Halls"] = "kara10" }
+local function autoStart()
+  if LOG then return end
+  local zone = GetRealZoneText and GetRealZoneText() or ""
+  local raid = RAIDS[zone]
+  if not raid and IsInInstance then local inI, kind = IsInInstance(); if inI and kind == "raid" then raid = "raid" end end
+  if not raid then return end
+  local db = OctoPlannerExportDB
+  if db and db.autoOff and db.autoOff.zone == zone and time() - (db.autoOff.t or 0) < 6 * 3600 then return end
+  OPE_Log(raid)
+  if LOG then say("Started by itself because you are in " .. zone .. ". /ope log stop stops it.") end
+end
+
 -- ---------- events ----------
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "CHAT_MSG_COMBAT_SELF_HITS", "CHAT_MSG_COMBAT_SELF_MISSES", "CHAT_MSG_SPELL_SELF_DAMAGE",
   "CHAT_MSG_SPELL_PERIODIC_CREATURE_DAMAGE", "CHAT_MSG_COMBAT_CREATURE_VS_SELF_HITS", "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES",
   "CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE", "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS",
   "CHAT_MSG_SPELL_SELF_BUFF", "CHAT_MSG_SPELL_AURA_GONE_SELF", "CHAT_MSG_COMBAT_FRIENDLY_DEATH",
-  "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD", "PLAYER_LOGOUT" }) do
+  "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_ENTERING_WORLD", "PLAYER_LOGOUT", "ZONE_CHANGED_NEW_AREA" }) do
   ev:RegisterEvent(e)
 end
 pcall(function() ev:RegisterEvent("PLAYER_CAMPING") end)
@@ -341,9 +375,12 @@ ev:SetScript("OnEvent", function()
         for _, l in ipairs(c.logs) do if l.live then LOG = l end end
         if LOG then shout("\"" .. (LOG.label or "log") .. "\" is still recording (since " .. since(LOG.date) .. ", " .. table.getn(LOG.fights) .. " fights). /ope log stop stops it.") end
       end
+      if not LOG and c then resumeAfterCrash(c) end
     end
+    autoStart()
     return
   end
+  if event == "ZONE_CHANGED_NEW_AREA" then autoStart() return end
   if not LOG then return end
   if event == "PLAYER_CAMPING" or event == "PLAYER_QUITING" then
     say("\"" .. (LOG.label or "log") .. "\" stays on and carries on when you log back in.")
@@ -389,6 +426,8 @@ function OPE_Log(arg)
     if LOG.cl and LoggingCombat then LoggingCombat(0) end
     LOG.live = nil
     LOG.ended = time()
+    if OPE_RunNote then OPE_RunNote(nil) end
+    if stop and OctoPlannerExportDB then OctoPlannerExportDB.autoOff = { zone = GetRealZoneText and GetRealZoneText() or "", t = time() } end
     local fights, old = table.getn(LOG.fights), (LOG.label or "log")
     -- a log with no fight and almost nothing in it (started by mistake) isn't kept
     if fights == 0 and table.getn(LOG.ev or {}) < 200 and not LOG.parts then
@@ -404,6 +443,7 @@ function OPE_Log(arg)
   end
   c.logs = c.logs or {}
   LOG = { label = name, date = time(), zone = GetRealZoneText and GetRealZoneText() or "", live = 1, fights = {} }
+  if OctoPlannerExportDB then OctoPlannerExportDB.autoOff = nil end
   table.insert(c.logs, LOG)
   while table.getn(c.logs) > MAX_LOGS do table.remove(c.logs, 1) end
   if UnitAffectingCombat("player") then startFight() end

@@ -49,7 +49,7 @@ local function attach()
   if l ~= LOG then
     LOG = l; full = false
     if LOG then
-      if not LOG.t0 then LOG.t0 = time(); LOG.ev = {}; G0 = GetTime()
+      if not LOG.t0 then LOG.t0 = time(); LOG.ev = {}; G0 = GetTime(); if OPE_RunNote then OPE_RunNote(LOG) end
       else
         G0 = GetTime() - (time() - LOG.t0)
         -- picked up again after a log out or disconnect: note how long nothing was recorded
@@ -90,6 +90,7 @@ local function flush(force)
   LOG.parts = part
   LOG.files = LOG.files or {}
   table.insert(LOG.files, name)
+  OPE_RunNote(LOG)
   LOG.ev = {}
   full, warned = false, false
   if not exportSaid then
@@ -98,6 +99,28 @@ local function flush(force)
   end
 end
 OPE_LogFlush = flush
+
+-- 5.10: octo_run.txt in the imports folder says which log is running. OctoPlannerExport.lua is only written on
+-- /reload, log out or a normal quit, so after a crash or a forced restart the add-on didn't know a log had been
+-- running and the rest of the raid wasn't recorded. At login this note lets the same log carry on.
+function OPE_RunNote(L)
+  if not ExportFile then return end
+  local text = "stopped"
+  if L and L.live and L.t0 then
+    text = math.floor(L.t0) .. "\t" .. (L.parts or 0) .. "\t" .. (L.date or L.t0) .. "\t" .. (L.label or "") .. "\t" .. (L.zone or "") .. "\t" .. (UnitName and UnitName("player") or "")
+  end
+  pcall(ExportFile, "octo_run.txt", text)
+end
+function OPE_RunRead()
+  if not ImportFile then return nil end
+  local ok, text = pcall(ImportFile, "octo_run.txt")
+  if not ok or type(text) ~= "string" then return nil end
+  local _, _, t0, parts, d, label, zone, who = string.find(text, "^(%d+)\t(%d+)\t(%d+)\t([^\t\r\n]*)\t([^\t\r\n]*)\t?([^\r\n]*)")
+  if not t0 then return nil end
+  -- the imports folder is shared by all characters: only the one that was recording carries on
+  if who and who ~= "" and UnitName and who ~= UnitName("player") then return nil end
+  return { t0 = tonumber(t0), parts = tonumber(parts), date = tonumber(d), label = label ~= "" and label or nil, zone = zone }
+end
 
 -- the parts are read back into the saved file (log.full), so OctoPlannerExport.lua alone holds the whole log:
 -- when the log stops, and at login for any log with parts that aren't in yet. The part files stay as a backup.
