@@ -28,6 +28,9 @@ Target dummy runs
   /ope dummy          type it again to stop. The run is saved with its damage, DPS and a breakdown per ability.
   A run still recording when you /reload or log out is saved automatically.
   /ope dummy clear    delete this character's saved runs
+  /ope chat           chat record, kept apart from the fight log (say, yell, raid, guild, whispers,
+                      channels, rolls), 14 days. Also turns on Logs/WoWChatLog.txt.
+                      /ope chat off | on   /ope chat file off | on   /ope chat clear
   /ope cc             show in chat which ability uses each Clearcasting (type again to turn off)
   Each run also measures how much each ability grows with attack power. Do runs at different
   attack power (no buffs, raid buffs, buffs plus consumables) to fill the planner's scaling table.
