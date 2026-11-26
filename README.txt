@@ -45,6 +45,8 @@ Fight log (raids and dungeons)
                       damage you took, deaths, consumables and buff uptime.
   /ope log            while one is on: shows that it is still recording (it never stops it).
   /ope log stop       stop and save it (end, off, done and finish work too).
+                      For 10 minutes after, loot, rolls and trades still go into it, so the
+                      planner shows who ended up with each item (Octo allows one trade in 10 min).
   /ope log <new name> save the running one and start a new one.
   /ope log clear      delete saved logs.
   With SuperWoW the log is also written in parts to the game's "imports" folder (octo_<start>_001.txt,

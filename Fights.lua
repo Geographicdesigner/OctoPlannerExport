@@ -426,6 +426,7 @@ function OPE_Log(arg)
     if LOG.cl and LoggingCombat then LoggingCombat(0) end
     LOG.live = nil
     LOG.ended = time()
+    if OPE_AfterStart then OPE_AfterStart(LOG) end
     if OPE_RunNote then OPE_RunNote(nil) end
     if stop and OctoPlannerExportDB then OctoPlannerExportDB.autoOff = { zone = GetRealZoneText and GetRealZoneText() or "", t = time() } end
     local fights, old = table.getn(LOG.fights), (LOG.label or "log")
@@ -455,3 +456,44 @@ function OPE_Log(arg)
   say("Addon " .. (GetAddOnMetadata and GetAddOnMetadata("OctoPlannerExport", "Version") or "?") .. (ExportFile and ", writing parts to the imports folder" or ", saving in the addon file (no SuperWoW file writing found)") .. ".")
   if OPE_ClientSay then OPE_ClientSay() end
 end
+
+-- ---------- 5.11.1: loot, rolls and trades for 10 minutes after a log stops ----------
+-- Octo lets raid loot be traded once in its first 10 minutes. Trades and rolls right after the last boss
+-- still go into the log that just stopped, in its own small list (after), so the planner shows who has each item.
+local AFTER_SECS, AFTER_MAX = 600, 3000
+local AL, AU = nil, 0
+function OPE_AfterStart(L)
+  if not L or not L.t0 then return end
+  AL, AU = L, time() + AFTER_SECS
+  if OctoPlannerExportDB then OctoPlannerExportDB.after = { t0 = L.t0, u = AU } end
+end
+local function afterStop()
+  AL = nil
+  if OctoPlannerExportDB then OctoPlannerExportDB.after = nil end
+end
+local af = CreateFrame("Frame")
+af:RegisterEvent("CHAT_MSG_SYSTEM")
+af:RegisterEvent("CHAT_MSG_LOOT")
+af:RegisterEvent("PLAYER_ENTERING_WORLD")
+af:SetScript("OnEvent", function()
+  if event == "PLAYER_ENTERING_WORLD" then
+    -- after a /reload or a new login, carry on for the time that is left
+    local a = OctoPlannerExportDB and OctoPlannerExportDB.after
+    if not AL and a and a.u and time() < a.u then
+      local c = charDB()
+      if c and c.logs then for _, l in ipairs(c.logs) do if l.t0 == a.t0 then AL, AU = l, a.u end end end
+    end
+    if not AL and a then afterStop() end
+    return
+  end
+  if not AL then return end
+  if LOG or time() > AU then afterStop() return end
+  local text = arg1
+  if not text or text == "" then return end
+  if event == "CHAT_MSG_SYSTEM" and not (string.find(text, " rolls %d+ %(%d+%-%d+%)") or string.find(text, " trades item ")) then return end
+  AL.after = AL.after or {}
+  if table.getn(AL.after) >= AFTER_MAX then return end
+  local code = OPE_ChanCode and OPE_ChanCode(event)
+  if not code then return end
+  table.insert(AL.after, string.format("%.1f", time() - AL.t0) .. "\t" .. code .. "\t" .. text)
+end)

@@ -38,6 +38,7 @@ local CH = {
 }
 local CHN = {}
 for i, e in ipairs(CH) do CHN[e] = i end
+function OPE_ChanCode(e) return CHN[e] end
 
 local LOG, G0 = nil, 0
 local full, warned = false, false
