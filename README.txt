@@ -3,7 +3,8 @@ Octo Planner Export
 Saves everything the Octo Druid Gear Planner needs:
   1. Your talents, worn gear, bags and professions (automatically, on login, logout and gear changes).
   2. Your bank (open your bank once).
-  3. Octo's own item tooltips and icons, when you run /ope scan.
+  3. Octo's own item tooltips and icons, when you run /ope scan. The scan first saves the icons of
+     the spells the planner is still missing (SpellList.lua), instantly, with SuperWoW.
 With this addon you don't need Bagshui or another bag addon for the planner.
 
 Install

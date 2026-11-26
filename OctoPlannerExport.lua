@@ -322,6 +322,20 @@ SlashCmdList["OCTOPLANNEREXPORT"] = function(msg)
   msg = string.lower(msg or "")
   local _, _, cmd, arg = string.find(msg, "^(%S*)%s*(.-)$")
   if cmd == "scan" then
+    -- spells first: SuperWoW reads their name and icon straight from the game, no waiting
+    if SpellInfo and OPE_SPELL_IDS then
+      db.spells = db.spells or {}
+      local got = 0
+      for _, id in ipairs(OPE_SPELL_IDS) do
+        local ok, name, rank, tex = pcall(SpellInfo, id)
+        if ok and name and tex then
+          local _, _, short = string.find(tex, "([^\\]+)$")
+          db.spells[id] = { n = name, r = rank, i = short or tex }
+          got = got + 1
+        end
+      end
+      say(got .. " of " .. table.getn(OPE_SPELL_IDS) .. " spell icons saved.")
+    end
     if db.scan.pos >= total() and not db.scan.running then
       -- second pass: keep everything already saved, only fill in items without an icon
       local missing = 0
