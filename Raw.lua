@@ -41,6 +41,7 @@ for i, e in ipairs(CH) do CHN[e] = i end
 function OPE_ChanCode(e) return CHN[e] end
 
 local LOG, G0 = nil, 0
+local wasOn = false   -- false until the start lines (zone, mods, group) are written for the current log
 local full, warned = false, false
 local gapAt = nil
 local function clock() return GetTime() - G0 end
@@ -48,7 +49,8 @@ local function clock() return GetTime() - G0 end
 local function attach()
   local l = OPE_CurrentLog and OPE_CurrentLog()
   if l ~= LOG then
-    LOG = l; full = false
+    -- a new log (also one that takes over from a running log with /ope log <name>) gets its own start lines
+    LOG = l; full = false; wasOn = false
     if LOG then
       if not LOG.t0 then LOG.t0 = time(); LOG.ev = {}; G0 = GetTime(); if OPE_RunNote then OPE_RunNote(LOG) end
       else
@@ -241,7 +243,6 @@ for _, e in ipairs({ "UNIT_ENERGY", "UNIT_RAGE", "UNIT_MANA", "UNIT_HEALTH", "UN
   ev:RegisterEvent(e)
 end
 pcall(function() ev:RegisterEvent("UNIT_CASTEVENT") end)
-local wasOn = false
 ev:SetScript("OnEvent", function()
   if not attach() then wasOn = false return end
   if not wasOn then
